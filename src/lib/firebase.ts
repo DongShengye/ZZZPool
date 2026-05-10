@@ -249,19 +249,24 @@ export async function addFriendByUsername(uid: string, username: string) {
 
   const friendshipId = [uid, addresseeId].sort().join("_");
   const friendshipRef = doc(database, "friendships", friendshipId);
-  const existing = await getDoc(friendshipRef);
 
-  if (existing.exists()) {
-    throw new Error("A friend request already exists for this person.");
+  try {
+    await setDoc(friendshipRef, {
+      users: [uid, addresseeId].sort(),
+      requesterId: uid,
+      addresseeId,
+      status: "pending",
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    const message = explainFirebaseError(error);
+
+    if (message.includes("Missing or insufficient permissions")) {
+      throw new Error("A friend request may already exist for this person.");
+    }
+
+    throw error;
   }
-
-  await setDoc(friendshipRef, {
-    users: [uid, addresseeId].sort(),
-    requesterId: uid,
-    addresseeId,
-    status: "pending",
-    createdAt: serverTimestamp()
-  });
 }
 
 export async function updateFriendship(friendshipId: string, status: Friendship["status"]) {
