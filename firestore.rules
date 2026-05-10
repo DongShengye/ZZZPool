@@ -1,0 +1,92 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function friendshipAccepted(userId) {
+      return signedIn() && (
+        exists(/databases/$(database)/documents/friendships/$(request.auth.uid + "_" + userId)) &&
+        get(/databases/$(database)/documents/friendships/$(request.auth.uid + "_" + userId)).data.status == "accepted"
+      ) || (
+        signedIn() &&
+        exists(/databases/$(database)/documents/friendships/$(userId + "_" + request.auth.uid)) &&
+        get(/databases/$(database)/documents/friendships/$(userId + "_" + request.auth.uid)).data.status == "accepted"
+      );
+    }
+
+    function friendshipParticipant() {
+      return signedIn() && request.auth.uid in resource.data.users;
+    }
+
+    function profilePublic(userId) {
+      return exists(/databases/$(database)/documents/profiles/$(userId)) &&
+        get(/databases/$(database)/documents/profiles/$(userId)).data.showInCommunity == true;
+    }
+
+    match /usernames/{username} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(["uid", "username"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == username;
+      allow update, delete: if false;
+    }
+
+    match /profiles/{userId} {
+      allow read: if owns(userId) || friendshipAccepted(userId) || resource.data.showInCommunity == true;
+      allow create: if owns(userId)
+        && request.resource.data.keys().hasOnly(["username", "displayName", "avatarStyle", "hiddenFromPool", "showInCommunity", "createdAt"])
+        && request.resource.data.username is string
+        && request.resource.data.displayName is string
+        && request.resource.data.avatarStyle is string
+        && request.resource.data.hiddenFromPool is bool
+        && request.resource.data.showInCommunity is bool
+        && request.resource.data.createdAt == request.time;
+      allow update: if owns(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["displayName", "avatarStyle", "hiddenFromPool", "showInCommunity"])
+        && request.resource.data.username == resource.data.username;
+      allow delete: if false;
+    }
+
+    match /statuses/{userId} {
+      allow read: if owns(userId) || friendshipAccepted(userId) || profilePublic(userId);
+      allow create, update: if owns(userId)
+        && request.resource.data.keys().hasOnly(["userId", "isSleeping", "updatedAt"])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.isSleeping is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /friendships/{friendshipId} {
+      allow read: if friendshipParticipant();
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(["users", "requesterId", "addresseeId", "status", "createdAt"])
+        && request.resource.data.requesterId == request.auth.uid
+        && request.resource.data.addresseeId is string
+        && request.resource.data.addresseeId != request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.users is list
+        && request.resource.data.users.size() == 2
+        && request.auth.uid in request.resource.data.users
+        && request.resource.data.addresseeId in request.resource.data.users
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn()
+        && resource.data.addresseeId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
+        && resource.data.status == "pending"
+        && request.resource.data.status in ["accepted", "blocked"];
+
+      allow delete: if false;
+    }
+  }
+}
