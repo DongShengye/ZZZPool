@@ -1,79 +1,45 @@
 # ZZZPool
 
-A tiny community sleep status pool: asleep, not ignoring you.
+**Asleep, not ignoring you.**
 
-## Backend
+ZZZPool is a tiny social pool where people can show one simple status: sleeping or awake.
 
-This MVP uses Firebase on the free Spark plan:
+Instead of feeling like a serious status app, everyone appears as a cute little character floating in a digital pool. Awake friends wave from their floaties. Sleeping friends drift peacefully with a little ZZZ bubble.
 
-- Firebase Authentication for sign-in.
-- Cloud Firestore for profiles, statuses, usernames, friendships, and community-pool visibility.
-- Firestore Security Rules for public community status visibility plus private/friends-only protections.
-- GitHub Pages for static hosting.
+## Why
 
-## Firebase Setup
+Sometimes you are not ignoring calls or messages. You are just genuinely asleep.
 
-1. Create a Firebase project.
-2. Enable Authentication providers:
-   - Google
-   - Anonymous, if you want the guest button to work.
-3. Create a Cloud Firestore database.
-4. Publish `firestore.rules` in Firebase Console, or use the Firebase CLI.
-5. Copy `.env.local.example` to `.env.local` and fill in the web app config values.
-6. Add your GitHub Pages URL to Firebase Auth authorized domains after deployment.
+ZZZPool turns that into a soft, playful signal:
 
-Do not commit `.env.local`. Firebase web config is injected from local env vars during development and GitHub Actions secrets during deployment.
+> I am unavailable right now, but nothing is wrong.
 
-## Local Development
+## What You Can Do
 
-```bash
-npm install
-npm run dev
-```
+- Pick a cute profile character
+- Set yourself as sleeping or awake
+- Float in a shared community pool
+- Add friends by username
+- Keep your status public or hide from the community pool
+- Check approximate last-updated times without exact sleep tracking
 
-## GitHub Pages Deployment
+## Privacy Vibe
 
-The workflow in `.github/workflows/pages.yml` builds a static Next.js export into `out/`.
+ZZZPool is intentionally simple.
 
-Add these repository secrets in GitHub at `Settings -> Secrets and variables -> Actions -> Repository secrets`:
+- No chat
+- No posts
+- No location
+- No call tracking
+- No detailed sleep analytics
+- No exact sleep timeline
 
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
+The app is about reassurance, not surveillance.
 
-The workflow in `.github/workflows/pages.yml` reads those secrets and exposes them only to the static build step.
+## Live Site
 
-Then enable GitHub Pages with source set to GitHub Actions and rerun the deployment workflow.
+https://dongshengye.github.io/ZZZPool/
 
-After rotating the Firebase API key, update both `.env.local` and the `NEXT_PUBLIC_FIREBASE_API_KEY` GitHub secret.
+## Status
 
-## Data Model
-
-```text
-usernames/{username}
-  uid
-  username
-
-profiles/{uid}
-  username
-  displayName
-  avatarStyle
-  showInCommunity
-  hiddenFromPool
-  createdAt
-
-statuses/{uid}
-  userId
-  isSleeping
-  updatedAt
-
-friendships/{uidA_uidB}
-  users
-  requesterId
-  addresseeId
-  status
-  createdAt
-```
+Early MVP. Cute pool energy first, complicated features later.
